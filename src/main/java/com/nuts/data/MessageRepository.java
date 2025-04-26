@@ -4,19 +4,24 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Data‑layer object.  Pure SQL only, no business rules.
+ */
 public class MessageRepository {
 
-    public void save(String content) {
-        String sql = "INSERT INTO messages (content) VALUES (?)";
+    private static final String INSERT_SQL =
+            "INSERT INTO messages(content, created_at) VALUES (?, NOW())";
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    private final Connection connection;
 
-            stmt.setString(1, content);
-            stmt.executeUpdate();
-            System.out.println("Saved to DB.");
-        } catch (SQLException e) {
-            System.err.println("Failed to save message: " + e.getMessage());
+    public MessageRepository(Connection connection) {
+        this.connection = connection;
+    }
+
+    public void save(String content) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(INSERT_SQL)) {
+            ps.setString(1, content);
+            ps.executeUpdate();
         }
     }
 }

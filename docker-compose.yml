@@ -1,35 +1,30 @@
-version: '3.8'
-
 services:
+  nats:
+    image: nats:2.11
+    ports: ["4222:4222"]
+
   db:
     image: postgres:15
-    container_name: postgres_nuts
-    restart: always
     environment:
+      POSTGRES_DB: nutsdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: nutsdb
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    command: ["postgres", "-c", "listen_addresses=*"]  # ✅ allow connections
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nuts_app
-    depends_on:
-      - db
     environment:
-      DB_URL: jdbc:postgresql://db:5432/nutsdb
-      DB_USER: postgres
-      DB_PASS: 1234
-    command: sh -c "mvn clean compile exec:java -Dexec.mainClass=com.nuts.Main"
-    volumes:
-      - .:/app  # Optional: so changes in code reflect
+      - NATS_URL=nats://nats:4222
+      - NATS_SUBJECT=updates
+      - DB_URL=jdbc:postgresql://db:5432/nutsdb
+      - DB_USER=postgres
+      - DB_PASS=1234
+    depends_on:
+      - nats
+      - db
 
 volumes:
   pgdata:

@@ -1,24 +1,24 @@
 package com.nuts.api;
 
-import com.nuts.service.MessageService;
+import io.nats.client.Connection;
+import io.nats.client.Dispatcher;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
+/**
+ * Thin wrapper around the NATS client.
+ */
 public class NutsSubscriber {
 
-    private final MessageService service = new MessageService();
+    private final Connection natsConnection;
+    private final Dispatcher dispatcher;
 
-    public void start() {
-        System.out.println("Starting simulated Nuts subscription...");
-        Timer timer = new Timer();
+    public NutsSubscriber(Connection natsConnection) {
+        this.natsConnection = natsConnection;
+        this.dispatcher = natsConnection.createDispatcher(msg -> { /* no‑op default */ });
+    }
 
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                String msg = "Test message at " + System.currentTimeMillis();
-                service.handleMessage(msg);
-            }
-        }, 0, 5000); // every 5 seconds
+    /** Subscribe and forward each message to the given handler. */
+    public void subscribe(String subject, java.util.function.Consumer<String> handler) {
+        dispatcher.subscribe(subject, m -> handler.accept(new String(m.getData())));
+        System.out.printf("📡 Subscribed to %s%n", subject);
     }
 }
